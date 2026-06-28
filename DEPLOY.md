@@ -50,7 +50,7 @@ vercel --prod
 From this folder:
 
 ```powershell
-node server.js
+npm run local
 ```
 
 Then open:
