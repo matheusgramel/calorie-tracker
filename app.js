@@ -162,7 +162,15 @@ async function loadRemoteState() {
   try {
     const response = await fetchWithAccessCode("/api/state");
     if (!response.ok) throw new Error(await getResponseError(response, "load"));
-    state = normalizeState(await response.json());
+    const remoteState = normalizeState(await response.json());
+    const localState = loadLocalState();
+    if (isStateEmpty(remoteState) && hasTrackedData(localState)) {
+      state = localState;
+      setSyncStatus("error", "Cloud data is empty", "This device has data. Click Upload this device to make it the shared cloud data.");
+      render();
+      return;
+    }
+    state = remoteState;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     setSyncStatus("ok", "Cloud sync connected", "Loaded shared data from the server.");
     render();
@@ -235,6 +243,21 @@ async function uploadLocalState() {
   } catch (error) {
     setSyncStatus("error", "Cloud sync failed", error.message);
   }
+}
+
+function isStateEmpty(nextState) {
+  return !hasTrackedData(nextState);
+}
+
+function hasTrackedData(nextState) {
+  const hasMeals = Object.values(nextState.days || {}).some((day) => {
+    return (day.planned || []).length > 0 || (day.consumed || []).length > 0;
+  });
+  if (hasMeals) return true;
+
+  const ingredientNames = (nextState.ingredients || []).map((ingredient) => ingredient.name).sort().join("|");
+  const defaultNames = defaultIngredients.map((ingredient) => ingredient.name).sort().join("|");
+  return ingredientNames !== defaultNames;
 }
 
 async function getResponseError(response, action) {
