@@ -19,8 +19,8 @@ This folder is ready to deploy to Vercel as a small web app.
 4. Confirm these environment variables exist in Vercel:
 
 ```text
-UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_TOKEN
+KV_REST_API_URL
+KV_REST_API_TOKEN
 ACCESS_CODE
 ```
 
