@@ -22,6 +22,12 @@ const els = {
   dayMacros: document.querySelector("#day-macros"),
   consumedMacros: document.querySelector("#consumed-macros"),
   mealMacros: document.querySelector("#meal-macros"),
+  syncPanel: document.querySelector("#sync-panel"),
+  syncStatus: document.querySelector("#sync-status"),
+  syncDetail: document.querySelector("#sync-detail"),
+  syncNow: document.querySelector("#sync-now"),
+  resetAccessCode: document.querySelector("#reset-access-code"),
+  uploadLocal: document.querySelector("#upload-local"),
   summaryTitle: document.querySelector("#summary-title"),
   summaryStatus: document.querySelector("#summary-status"),
   ingredientSearch: document.querySelector("#ingredient-search"),
@@ -118,6 +124,12 @@ els.saveConsumed.addEventListener("click", () => saveMeal("consumed"));
 els.customMealForm.addEventListener("submit", (event) => event.preventDefault());
 els.customPlanned.addEventListener("click", () => saveCustomMeal("planned"));
 els.customConsumed.addEventListener("click", () => saveCustomMeal("consumed"));
+els.syncNow.addEventListener("click", () => loadRemoteState({ forcePrompt: false }));
+els.resetAccessCode.addEventListener("click", () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  setSyncStatus("pending", "Access code cleared", "Click Sync now and enter the code again.");
+});
+els.uploadLocal.addEventListener("click", uploadLocalState);
 
 function loadLocalState() {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -142,14 +154,20 @@ function normalizeState(nextState) {
 }
 
 async function loadRemoteState() {
-  if (!API_ENABLED) return;
+  if (!API_ENABLED) {
+    setSyncStatus("local", "Local file mode", "Open the Vercel URL on every device to sync.");
+    return;
+  }
+  setSyncStatus("pending", "Cloud sync checking...", "Loading server data");
   try {
     const response = await fetchWithAccessCode("/api/state");
-    if (!response.ok) throw new Error(`Load failed: ${response.status}`);
+    if (!response.ok) throw new Error(await getResponseError(response, "load"));
     state = normalizeState(await response.json());
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    setSyncStatus("ok", "Cloud sync connected", "Loaded shared data from the server.");
     render();
   } catch (error) {
+    setSyncStatus("error", "Cloud sync failed", error.message);
     console.warn("Using local browser data because server sync failed.", error);
   }
 }
@@ -159,13 +177,16 @@ function queueRemoteSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
+      setSyncStatus("pending", "Cloud sync saving...", "Uploading this device's latest changes.");
       const response = await fetchWithAccessCode("/api/state", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(state)
       });
-      if (!response.ok) throw new Error(`Save failed: ${response.status}`);
+      if (!response.ok) throw new Error(await getResponseError(response, "save"));
+      setSyncStatus("ok", "Cloud sync saved", "This device's changes were saved to the server.");
     } catch (error) {
+      setSyncStatus("error", "Cloud sync failed", error.message);
       console.warn("Server sync failed. Changes remain saved in this browser.", error);
     }
   }, 250);
@@ -179,7 +200,10 @@ async function fetchWithAccessCode(url, options = {}) {
 
   if (response.status === 401) {
     const nextToken = window.prompt("Enter the app access code");
-    if (!nextToken) return response;
+    if (!nextToken) {
+      setSyncStatus("error", "Access code needed", "Sync cannot start until you enter the app access code.");
+      return response;
+    }
     localStorage.setItem(ACCESS_TOKEN_KEY, nextToken);
     response = await fetch(url, {
       ...options,
@@ -188,6 +212,45 @@ async function fetchWithAccessCode(url, options = {}) {
   }
 
   return response;
+}
+
+async function uploadLocalState() {
+  if (!API_ENABLED) {
+    setSyncStatus("local", "Local file mode", "Open the Vercel URL before uploading.");
+    return;
+  }
+
+  const confirmed = window.confirm("Upload this device's current data to the cloud? This replaces the shared cloud data.");
+  if (!confirmed) return;
+
+  try {
+    setSyncStatus("pending", "Cloud sync saving...", "Uploading this device's current data.");
+    const response = await fetchWithAccessCode("/api/state", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(state)
+    });
+    if (!response.ok) throw new Error(await getResponseError(response, "upload"));
+    setSyncStatus("ok", "Cloud sync saved", "This device is now the shared cloud data.");
+  } catch (error) {
+    setSyncStatus("error", "Cloud sync failed", error.message);
+  }
+}
+
+async function getResponseError(response, action) {
+  try {
+    const payload = await response.json();
+    return payload.detail || payload.error || `${action} failed with status ${response.status}`;
+  } catch {
+    return `${action} failed with status ${response.status}`;
+  }
+}
+
+function setSyncStatus(kind, status, detail) {
+  els.syncPanel.classList.toggle("sync-ok", kind === "ok");
+  els.syncPanel.classList.toggle("sync-error", kind === "error");
+  els.syncStatus.textContent = status;
+  els.syncDetail.textContent = detail;
 }
 
 function makeId() {

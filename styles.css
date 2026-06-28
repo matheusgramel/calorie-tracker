@@ -81,6 +81,7 @@ label {
 
 .topbar,
 .summary-band,
+.sync-panel,
 .tabs,
 .workspace-grid,
 .meal-columns {
@@ -142,6 +143,51 @@ h3 {
   background: var(--ink);
   color: #fff;
   box-shadow: var(--shadow);
+}
+
+.sync-panel {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(216, 223, 217, 0.85);
+  border-radius: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.sync-panel span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 850;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.sync-panel strong {
+  display: block;
+  font-size: 0.96rem;
+}
+
+.sync-panel.sync-ok {
+  border-color: #bad8c9;
+}
+
+.sync-panel.sync-error {
+  background: #fff7e6;
+  border-color: #e3b36c;
+}
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.sync-actions button {
+  min-height: 36px;
+  padding: 0 12px;
 }
 
 .summary-copy {
@@ -434,6 +480,7 @@ h3 {
 @media (max-width: 800px) {
   .topbar,
   .summary-band,
+  .sync-panel,
   .workspace-grid,
   .meal-columns,
   .edit-banner,
@@ -443,6 +490,14 @@ h3 {
 
   .edit-banner {
     align-items: stretch;
+  }
+
+  .sync-actions {
+    justify-content: stretch;
+  }
+
+  .sync-actions button {
+    flex: 1 1 130px;
   }
 
   .tabs,
