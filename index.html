@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Calorie Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Daily nutrition planner</p>
+          <h1>Calorie Tracker</h1>
+        </div>
+        <div class="date-picker">
+          <label for="active-date">Day</label>
+          <input id="active-date" type="date">
+        </div>
+      </header>
+
+      <section class="summary-band" aria-label="Day summary">
+        <div class="summary-copy">
+          <span id="summary-status">Planned day</span>
+          <strong id="summary-title">0 kcal planned</strong>
+        </div>
+        <div class="macro-grid" id="day-macros"></div>
+      </section>
+
+      <nav class="tabs" aria-label="Main sections">
+        <button class="tab active" data-view="planner" type="button">Meal planner</button>
+        <button class="tab" data-view="ingredients" type="button">Ingredients</button>
+        <button class="tab" data-view="history" type="button">Daily log</button>
+      </nav>
+
+      <section class="view active" id="planner-view">
+        <div class="workspace-grid">
+          <section class="panel meal-builder">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Build a meal</p>
+                <h2>Choose ingredients</h2>
+              </div>
+              <button class="ghost-button" id="clear-builder" type="button">Clear</button>
+            </div>
+
+            <div class="meal-name-row">
+              <label for="meal-name">Meal name</label>
+              <input id="meal-name" type="text" placeholder="Lunch, dinner, post-workout...">
+            </div>
+
+            <div class="edit-banner" id="edit-banner" hidden>
+              <span id="edit-banner-text">Editing consumed meal</span>
+              <button class="ghost-button" id="cancel-edit" type="button">Cancel edit</button>
+            </div>
+
+            <form class="ingredient-picker" id="ingredient-picker">
+              <label class="ingredient-search-field">
+                Type ingredient name
+                <input id="ingredient-search" type="text" list="ingredient-options" placeholder="Start typing an ingredient...">
+                <datalist id="ingredient-options"></datalist>
+              </label>
+              <label>
+                Or choose from list
+                <select id="ingredient-select"></select>
+              </label>
+              <label>
+                Amount
+                <input id="ingredient-amount" type="number" min="0" step="any" placeholder="100">
+              </label>
+              <button type="submit">Add</button>
+            </form>
+
+            <div class="empty-state" id="builder-empty">
+              Add ingredients to preview the meal macros before saving it.
+            </div>
+            <div class="builder-list" id="builder-list"></div>
+
+            <div class="custom-meal-card">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">Eating out</p>
+                  <h2>Quick add meal</h2>
+                </div>
+              </div>
+              <form id="custom-meal-form" class="custom-meal-form">
+                <label>
+                  Meal name
+                  <input id="custom-name" type="text" placeholder="Restaurant meal, snack, takeout...">
+                </label>
+                <label>
+                  Calories
+                  <input id="custom-calories" type="number" min="0" step="1" required>
+                </label>
+                <label>
+                  Protein
+                  <input id="custom-protein" type="number" min="0" step="0.1" required>
+                </label>
+                <label>
+                  Carbs
+                  <input id="custom-carbs" type="number" min="0" step="0.1" required>
+                </label>
+                <label>
+                  Fat
+                  <input id="custom-fat" type="number" min="0" step="0.1" required>
+                </label>
+                <div class="custom-actions">
+                  <button id="custom-planned" type="button">Plan custom meal</button>
+                  <button id="custom-consumed" class="secondary-button" type="button">Register consumed</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <aside class="panel totals-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Current meal</p>
+                <h2 id="meal-total-title">0 kcal</h2>
+              </div>
+            </div>
+            <div class="macro-grid vertical" id="meal-macros"></div>
+            <div class="action-stack">
+              <button id="save-planned" type="button">Plan meal</button>
+              <button id="save-consumed" class="secondary-button" type="button">Register consumed</button>
+            </div>
+          </aside>
+        </div>
+
+        <section class="day-board">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Selected day</p>
+              <h2>Planned and consumed</h2>
+            </div>
+          </div>
+          <div class="meal-columns">
+            <div>
+              <h3>Planned</h3>
+              <div id="planned-meals" class="meal-list"></div>
+            </div>
+            <div>
+              <h3>Consumed</h3>
+              <div id="consumed-meals" class="meal-list"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="ingredients-view">
+        <div class="workspace-grid">
+          <section class="panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Food database</p>
+                <h2>Add ingredient</h2>
+              </div>
+            </div>
+            <form id="ingredient-form" class="ingredient-form">
+              <label>
+                Name
+                <input id="new-name" type="text" placeholder="Chicken breast" required>
+              </label>
+              <label>
+                Serving size
+                <input id="new-serving" type="number" min="1" step="1" value="100" required>
+              </label>
+              <label>
+                Unit
+                <input id="new-unit" type="text" value="g" required>
+              </label>
+              <label>
+                Calories
+                <input id="new-calories" type="number" min="0" step="1" required>
+              </label>
+              <label>
+                Protein
+                <input id="new-protein" type="number" min="0" step="0.1" required>
+              </label>
+              <label>
+                Carbs
+                <input id="new-carbs" type="number" min="0" step="0.1" required>
+              </label>
+              <label>
+                Fat
+                <input id="new-fat" type="number" min="0" step="0.1" required>
+              </label>
+              <button type="submit">Save ingredient</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Available</p>
+                <h2>Ingredients</h2>
+              </div>
+            </div>
+            <div id="ingredient-list" class="ingredient-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="history-view">
+        <div class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Official log</p>
+              <h2>Consumed totals for selected day</h2>
+            </div>
+          </div>
+          <div class="macro-grid" id="consumed-macros"></div>
+          <div id="history-list" class="meal-list history"></div>
+        </div>
+      </section>
+    </main>
+
+    <template id="macro-template">
+      <div class="macro-card">
+        <span></span>
+        <strong></strong>
+      </div>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
