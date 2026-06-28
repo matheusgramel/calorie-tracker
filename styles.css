@@ -190,6 +190,32 @@ h3 {
   padding: 0 12px;
 }
 
+.file-button {
+  align-items: center;
+  background: var(--soft-green);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1rem;
+  font-weight: 750;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.file-button:hover {
+  background: #d5e6dc;
+}
+
+#import-backup {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .summary-copy {
   display: grid;
   gap: 4px;

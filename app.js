@@ -27,6 +27,8 @@ const els = {
   syncDetail: document.querySelector("#sync-detail"),
   syncNow: document.querySelector("#sync-now"),
   resetAccessCode: document.querySelector("#reset-access-code"),
+  exportBackup: document.querySelector("#export-backup"),
+  importBackup: document.querySelector("#import-backup"),
   uploadLocal: document.querySelector("#upload-local"),
   summaryTitle: document.querySelector("#summary-title"),
   summaryStatus: document.querySelector("#summary-status"),
@@ -129,6 +131,8 @@ els.resetAccessCode.addEventListener("click", () => {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   setSyncStatus("pending", "Access code cleared", "Click Sync now and enter the code again.");
 });
+els.exportBackup.addEventListener("click", exportBackup);
+els.importBackup.addEventListener("change", importBackup);
 els.uploadLocal.addEventListener("click", uploadLocalState);
 
 function loadLocalState() {
@@ -242,6 +246,49 @@ async function uploadLocalState() {
     setSyncStatus("ok", "Cloud sync saved", "This device is now the shared cloud data.");
   } catch (error) {
     setSyncStatus("error", "Cloud sync failed", error.message);
+  }
+}
+
+function exportBackup() {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    app: "calorie-tracker",
+    state
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `calorie-tracker-backup-${toDateInput(new Date())}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setSyncStatus("ok", "Backup exported", "Use Import backup on the Vercel app, then Upload this device.");
+}
+
+async function importBackup(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const importedState = normalizeState(parsed.state || parsed);
+    if (!hasTrackedData(importedState)) {
+      throw new Error("This backup does not contain tracked meals or custom ingredients.");
+    }
+
+    const confirmed = window.confirm("Import this backup onto this device? You can upload it to cloud after import.");
+    if (!confirmed) return;
+
+    state = importedState;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    render();
+    setSyncStatus("ok", "Backup imported", "Review the data, then click Upload this device to make it cloud data.");
+  } catch (error) {
+    setSyncStatus("error", "Import failed", error.message);
   }
 }
 
