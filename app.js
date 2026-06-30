@@ -13,13 +13,15 @@ let state = loadLocalState();
 let builderItems = [];
 let activeDate = toDateInput(new Date());
 let editingMeal = null;
+let editingBuilderItemId = null;
 let saveTimer = null;
 
 const els = {
   activeDate: document.querySelector("#active-date"),
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
-  dayMacros: document.querySelector("#day-macros"),
+  consumedDayMacros: document.querySelector("#consumed-day-macros"),
+  plannedDayMacros: document.querySelector("#planned-day-macros"),
   consumedMacros: document.querySelector("#consumed-macros"),
   mealMacros: document.querySelector("#meal-macros"),
   syncPanel: document.querySelector("#sync-panel"),
@@ -30,13 +32,16 @@ const els = {
   exportBackup: document.querySelector("#export-backup"),
   importBackup: document.querySelector("#import-backup"),
   uploadLocal: document.querySelector("#upload-local"),
-  summaryTitle: document.querySelector("#summary-title"),
-  summaryStatus: document.querySelector("#summary-status"),
+  consumedSummaryTitle: document.querySelector("#consumed-summary-title"),
+  consumedSummaryStatus: document.querySelector("#consumed-summary-status"),
+  plannedSummaryTitle: document.querySelector("#planned-summary-title"),
+  plannedSummaryStatus: document.querySelector("#planned-summary-status"),
   ingredientSearch: document.querySelector("#ingredient-search"),
   ingredientOptions: document.querySelector("#ingredient-options"),
   ingredientSelect: document.querySelector("#ingredient-select"),
   ingredientPicker: document.querySelector("#ingredient-picker"),
   ingredientAmount: document.querySelector("#ingredient-amount"),
+  ingredientSubmit: document.querySelector("#ingredient-submit"),
   builderList: document.querySelector("#builder-list"),
   builderEmpty: document.querySelector("#builder-empty"),
   mealName: document.querySelector("#meal-name"),
@@ -102,7 +107,15 @@ els.ingredientPicker.addEventListener("submit", (event) => {
   const ingredient = getSelectedIngredient();
   const amount = Number(els.ingredientAmount.value);
   if (!ingredient || amount <= 0) return;
-  builderItems.push({ id: makeId(), ingredientId: ingredient.id, amount });
+  if (editingBuilderItemId) {
+    builderItems = builderItems.map((item) => {
+      if (item.id !== editingBuilderItemId) return item;
+      return { ...item, ingredientId: ingredient.id, amount };
+    });
+    editingBuilderItemId = null;
+  } else {
+    builderItems.push({ id: makeId(), ingredientId: ingredient.id, amount });
+  }
   els.ingredientAmount.value = "";
   els.ingredientSearch.value = "";
   renderBuilder();
@@ -480,6 +493,8 @@ function renderBuilder() {
     const itemTotals = calculateItems([item]);
     const row = document.createElement("article");
     row.className = "line-item";
+    row.classList.toggle("editing", item.id === editingBuilderItemId);
+    row.title = "Click to edit this ingredient amount";
     row.innerHTML = `
       <div>
         <strong>${escapeHtml(ingredient.name)}</strong>
@@ -487,8 +502,11 @@ function renderBuilder() {
       </div>
       <button class="icon-button" type="button" title="Remove item" aria-label="Remove ${escapeHtml(ingredient.name)}">x</button>
     `;
-    row.querySelector("button").addEventListener("click", () => {
+    row.addEventListener("click", () => loadBuilderItemForEdit(item));
+    row.querySelector("button").addEventListener("click", (event) => {
+      event.stopPropagation();
       builderItems = builderItems.filter((entry) => entry.id !== item.id);
+      if (editingBuilderItemId === item.id) editingBuilderItemId = null;
       renderBuilder();
     });
     els.builderList.append(row);
@@ -497,7 +515,19 @@ function renderBuilder() {
   const hasMeal = builderItems.length > 0;
   els.savePlanned.disabled = !hasMeal;
   els.saveConsumed.disabled = !hasMeal;
+  els.ingredientSubmit.textContent = editingBuilderItemId ? "Update" : "Add";
   setEditingState();
+}
+
+function loadBuilderItemForEdit(item) {
+  const ingredient = state.ingredients.find((entry) => entry.id === item.ingredientId);
+  if (!ingredient) return;
+  editingBuilderItemId = item.id;
+  els.ingredientSelect.value = ingredient.id;
+  els.ingredientSearch.value = ingredient.name;
+  els.ingredientAmount.value = item.amount;
+  renderBuilder();
+  els.ingredientAmount.focus();
 }
 
 function saveMeal(status) {
@@ -510,8 +540,8 @@ function saveMeal(status) {
     createdAt: new Date().toISOString()
   };
 
-  if (editingMeal?.status === "consumed" && status === "consumed" && editingMeal.type === "ingredients") {
-    updateMeal(editingMeal.id, "consumed", meal);
+  if (editingMeal?.type === "ingredients" && editingMeal.status === status) {
+    updateMeal(editingMeal.id, status, meal);
     clearBuilder();
     cancelEditMode();
     render();
@@ -541,8 +571,8 @@ function saveCustomMeal(status) {
     createdAt: new Date().toISOString()
   };
 
-  if (editingMeal?.status === "consumed" && status === "consumed" && editingMeal.type === "custom") {
-    updateMeal(editingMeal.id, "consumed", meal);
+  if (editingMeal?.type === "custom" && editingMeal.status === status) {
+    updateMeal(editingMeal.id, status, meal);
     clearCustomMeal();
     cancelEditMode();
     render();
@@ -557,7 +587,10 @@ function saveCustomMeal(status) {
 
 function clearBuilder() {
   builderItems = [];
+  editingBuilderItemId = null;
   els.mealName.value = "";
+  els.ingredientAmount.value = "";
+  els.ingredientSearch.value = "";
   renderBuilder();
 }
 
@@ -574,17 +607,14 @@ function renderDay() {
   const day = ensureDay(activeDate);
   const plannedTotals = calculateMeals(day.planned);
   const consumedTotals = calculateMeals(day.consumed);
-  const allTotals = {
-    calories: plannedTotals.calories + consumedTotals.calories,
-    protein: plannedTotals.protein + consumedTotals.protein,
-    carbs: plannedTotals.carbs + consumedTotals.carbs,
-    fat: plannedTotals.fat + consumedTotals.fat
-  };
 
-  renderMacroGrid(els.dayMacros, allTotals);
+  renderMacroGrid(els.consumedDayMacros, consumedTotals);
+  renderMacroGrid(els.plannedDayMacros, plannedTotals);
   renderMacroGrid(els.consumedMacros, consumedTotals);
-  els.summaryTitle.textContent = `${Math.round(allTotals.calories)} kcal staged`;
-  els.summaryStatus.textContent = `${Math.round(consumedTotals.calories)} kcal consumed officially`;
+  els.consumedSummaryTitle.textContent = `${Math.round(consumedTotals.calories)} kcal consumed`;
+  els.consumedSummaryStatus.textContent = "Officially consumed";
+  els.plannedSummaryTitle.textContent = `${Math.round(plannedTotals.calories)} kcal planned`;
+  els.plannedSummaryStatus.textContent = "Planned meals";
   renderMealList(els.plannedMeals, day.planned, "planned");
   renderMealList(els.consumedMeals, day.consumed, "consumed");
   renderMealList(els.historyList, day.consumed, "history");
@@ -623,7 +653,7 @@ function renderMealList(container, meals, status) {
       consume.addEventListener("click", () => moveMeal(meal.id, "planned", "consumed"));
       actions.append(consume);
     }
-    if (status === "consumed" || status === "history") {
+    if (status === "planned" || status === "consumed" || status === "history") {
       const edit = document.createElement("button");
       edit.type = "button";
       edit.textContent = "Edit";
@@ -635,6 +665,8 @@ function renderMealList(container, meals, status) {
     duplicate.className = "secondary-button";
     duplicate.textContent = "Use again";
     duplicate.addEventListener("click", () => {
+      cancelEditMode();
+      editingBuilderItemId = null;
       document.querySelector('[data-view="planner"]').click();
       if (meal.totals) {
         builderItems = [];
@@ -668,6 +700,7 @@ function renderMealList(container, meals, status) {
 function startEditMeal(meal, status) {
   const totals = calculateMealTotals(meal);
   const type = meal.totals ? "custom" : "ingredients";
+  editingBuilderItemId = null;
   editingMeal = { id: meal.id, status, type };
   document.querySelector('[data-view="planner"]').click();
 
@@ -695,13 +728,30 @@ function setEditingState() {
   const isEditing = Boolean(editingMeal);
   const hasMeal = builderItems.length > 0;
   els.editBanner.hidden = !isEditing;
-  els.editBannerText.textContent = isEditing ? "Editing consumed meal" : "";
-  els.savePlanned.disabled = isEditing || !hasMeal;
-  els.saveConsumed.disabled = (isEditing && editingMeal.type !== "ingredients") || !hasMeal;
-  els.customPlanned.disabled = isEditing;
-  els.customConsumed.disabled = isEditing && editingMeal.type !== "custom";
-  els.saveConsumed.textContent = isEditing && editingMeal.type === "ingredients" ? "Save changes" : "Register consumed";
-  els.customConsumed.textContent = isEditing && editingMeal.type === "custom" ? "Save changes" : "Register consumed";
+  els.editBannerText.textContent = isEditing ? `Editing ${editingMeal.status} meal` : "";
+
+  if (!isEditing) {
+    els.savePlanned.disabled = !hasMeal;
+    els.saveConsumed.disabled = !hasMeal;
+    els.customPlanned.disabled = false;
+    els.customConsumed.disabled = false;
+    els.savePlanned.textContent = "Plan meal";
+    els.saveConsumed.textContent = "Register consumed";
+    els.customPlanned.textContent = "Plan custom meal";
+    els.customConsumed.textContent = "Register consumed";
+    return;
+  }
+
+  const editingIngredients = editingMeal.type === "ingredients";
+  const editingCustom = editingMeal.type === "custom";
+  els.savePlanned.disabled = !editingIngredients || editingMeal.status !== "planned" || !hasMeal;
+  els.saveConsumed.disabled = !editingIngredients || editingMeal.status !== "consumed" || !hasMeal;
+  els.customPlanned.disabled = !editingCustom || editingMeal.status !== "planned";
+  els.customConsumed.disabled = !editingCustom || editingMeal.status !== "consumed";
+  els.savePlanned.textContent = editingIngredients && editingMeal.status === "planned" ? "Save changes" : "Plan meal";
+  els.saveConsumed.textContent = editingIngredients && editingMeal.status === "consumed" ? "Save changes" : "Register consumed";
+  els.customPlanned.textContent = editingCustom && editingMeal.status === "planned" ? "Save changes" : "Plan custom meal";
+  els.customConsumed.textContent = editingCustom && editingMeal.status === "consumed" ? "Save changes" : "Register consumed";
 }
 
 function updateMeal(mealId, status, nextMeal) {

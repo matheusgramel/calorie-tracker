@@ -19,13 +19,23 @@
         </div>
       </header>
 
-      <section class="summary-band" aria-label="Day summary">
-        <div class="summary-copy">
-          <span id="summary-status">Planned day</span>
-          <strong id="summary-title">0 kcal planned</strong>
-        </div>
-        <div class="macro-grid" id="day-macros"></div>
-      </section>
+      <div class="summary-stack" aria-label="Day summary">
+        <section class="summary-band">
+          <div class="summary-copy">
+            <span id="consumed-summary-status">Officially consumed</span>
+            <strong id="consumed-summary-title">0 kcal consumed</strong>
+          </div>
+          <div class="macro-grid" id="consumed-day-macros"></div>
+        </section>
+
+        <section class="summary-band">
+          <div class="summary-copy">
+            <span id="planned-summary-status">Planned meals</span>
+            <strong id="planned-summary-title">0 kcal planned</strong>
+          </div>
+          <div class="macro-grid" id="planned-day-macros"></div>
+        </section>
+      </div>
 
       <section class="sync-panel" id="sync-panel" aria-label="Cloud sync status">
         <div>
@@ -83,7 +93,7 @@
                 Amount
                 <input id="ingredient-amount" type="number" min="0" step="any" placeholder="100">
               </label>
-              <button type="submit">Add</button>
+              <button id="ingredient-submit" type="submit">Add</button>
             </form>
 
             <div class="empty-state" id="builder-empty">

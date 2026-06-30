@@ -80,7 +80,7 @@ label {
 }
 
 .topbar,
-.summary-band,
+.summary-stack,
 .sync-panel,
 .tabs,
 .workspace-grid,
@@ -93,6 +93,10 @@ label {
   grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
   align-items: end;
   margin-bottom: 16px;
+}
+
+.summary-stack {
+  gap: 10px;
 }
 
 h1,
@@ -404,6 +408,16 @@ h3 {
   align-items: center;
 }
 
+.line-item {
+  cursor: pointer;
+}
+
+.line-item:hover,
+.line-item.editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(47, 111, 94, 0.12);
+}
+
 .line-item strong,
 .ingredient-card strong,
 .meal-card strong {
@@ -505,6 +519,7 @@ h3 {
 
 @media (max-width: 800px) {
   .topbar,
+  .summary-stack,
   .summary-band,
   .sync-panel,
   .workspace-grid,
